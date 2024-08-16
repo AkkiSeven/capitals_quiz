@@ -36,7 +36,6 @@ class GameMenuScreen extends StatefulWidget {
 
 class _GameMenuScreenState extends State<GameMenuScreen> {
   String? selectedContinent;
-  int? numRandomCountries; // Start with null
 
   @override
   Widget build(BuildContext context) {
@@ -61,37 +60,15 @@ class _GameMenuScreenState extends State<GameMenuScreen> {
             _buildContinentButton('Europe', 'Europe'),
             _buildContinentButton('North America', 'North America'),
             _buildContinentButton('South America', 'South America'),
-            _buildContinentButton('Random', 'Random'),
-            SizedBox(height: 20),
-            if (selectedContinent == 'Random')
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: TextFormField(
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    labelText: 'Number of Countries',
-                    border: OutlineInputBorder(),
-                  ),
-                  onChanged: (value) {
-                    setState(() {
-                      numRandomCountries = int.tryParse(value);
-                    });
-                  },
-                ),
-              ),
             SizedBox(height: 20),
             ElevatedButton(
-              onPressed: selectedContinent != null &&
-                      (selectedContinent != 'Random' ||
-                          (numRandomCountries != null &&
-                              numRandomCountries! > 0))
+              onPressed: selectedContinent != null
                   ? () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (context) => CapitalsQuizScreen(
                             continent: selectedContinent,
-                            numRandomCountries: numRandomCountries,
                           ),
                         ),
                       );
@@ -117,10 +94,6 @@ class _GameMenuScreenState extends State<GameMenuScreen> {
         onPressed: () {
           setState(() {
             selectedContinent = continent;
-            // Reset numRandomCountries when a new continent is selected
-            if (continent != 'Random') {
-              numRandomCountries = null; 
-            }
           });
         },
         style: ElevatedButton.styleFrom(
@@ -138,9 +111,8 @@ class _GameMenuScreenState extends State<GameMenuScreen> {
 
 class CapitalsQuizScreen extends StatefulWidget {
   final String? continent;
-  final int? numRandomCountries;
 
-  CapitalsQuizScreen({this.continent, this.numRandomCountries});
+  CapitalsQuizScreen({this.continent});
 
   @override
   _CapitalsQuizScreenState createState() => _CapitalsQuizScreenState();
@@ -162,17 +134,6 @@ class _CapitalsQuizScreenState extends State<CapitalsQuizScreen> {
         if (widget.continent != null && widget.continent != 'All') {
           countriesData = (data[widget.continent!] as List<dynamic>)
               .cast<Map<String, dynamic>>();
-        } else if (widget.continent == 'Random' &&
-            widget.numRandomCountries != null) {
-          // Null check for numRandomCountries
-          countriesData = data.entries
-              .map((entry) => entry.value)
-              .expand((list) => list)
-              .toList()
-              .cast<Map<String, dynamic>>()
-            ..shuffle(Random());
-          countriesData =
-              countriesData.sublist(0, widget.numRandomCountries!);
         } else {
           countriesData = data.entries
               .map((entry) => entry.value)
@@ -192,36 +153,35 @@ class _CapitalsQuizScreenState extends State<CapitalsQuizScreen> {
   }
 
   void _generateQuestions() {
-  countriesData.shuffle(Random());
+    countriesData.shuffle(Random());
 
-  questions = [];
-  isAnswered = List.filled(
-      countriesData.length * 4, false); // Adjust isAnswered length
+    questions = [];
+    isAnswered = List.filled(
+        countriesData.length * 4, false); // Adjust isAnswered length
 
-  // Generate questions for ALL countries in the chosen continent
-  for (int i = 0; i < countriesData.length; i++) { 
-    Map<String, dynamic> countryData = countriesData[i];
-    String correctCapital = countryData['capital'];
-    List<String> answers = [correctCapital];
+    // Generate questions for ALL countries in the chosen continent
+    for (int i = 0; i < countriesData.length; i++) { 
+      Map<String, dynamic> countryData = countriesData[i];
+      String correctCapital = countryData['capital'];
+      List<String> answers = [correctCapital];
 
-    while (answers.length < 4) {
-      String randomCapital =
-          countriesData[Random().nextInt(countriesData.length)]['capital'];
-      if (!answers.contains(randomCapital)) {
-        answers.add(randomCapital);
+      while (answers.length < 4) {
+        String randomCapital =
+            countriesData[Random().nextInt(countriesData.length)]['capital'];
+        if (!answers.contains(randomCapital)) {
+          answers.add(randomCapital);
+        }
       }
+
+      answers.shuffle(Random());
+
+      questions.add({
+        'country': countryData['country'],
+        'answers': answers,
+        'correctAnswer': correctCapital,
+      });
     }
-
-    answers.shuffle(Random());
-
-    questions.add({
-      'country': countryData['country'],
-      'answers': answers,
-      'correctAnswer': correctCapital,
-    });
   }
-}
-
 
   void _checkAnswer(String selectedAnswer) {
     int buttonIndex =
@@ -255,18 +215,12 @@ class _CapitalsQuizScreenState extends State<CapitalsQuizScreen> {
     }
   }
 
-    void _showResultsDialog() {
-    setState(() {
-      currentQuestion = 0;
-      correctAnswers = 0;
-      _generateQuestions(); // Generate questions HERE!
-    });
-
+  void _showResultsDialog() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Well Done!'),
-        content: Text('You got $correctAnswers/${questions.length} correct!'), // Now uses the updated length
+        content: Text('You got $correctAnswers/${questions.length} correct!'),
         actions: [
           TextButton(
             onPressed: () {
@@ -281,7 +235,12 @@ class _CapitalsQuizScreenState extends State<CapitalsQuizScreen> {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              // No need to call _generateQuestions() here again
+              setState(() {
+                // Reset state for a new quiz
+                currentQuestion = 0;
+                correctAnswers = 0;
+                _generateQuestions(); // Generate new questions for a new game
+              });
             },
             child: Text('Play Again'),
           ),
@@ -304,8 +263,8 @@ class _CapitalsQuizScreenState extends State<CapitalsQuizScreen> {
                 padding: const EdgeInsets.all(16.0),
                 child: Text(
                   questions.isEmpty
-                      ? 'Loading questions...'
-                      : 'Question ${currentQuestion + 1}/10:\nWhat is the capital of ${questions[currentQuestion]['country']}?',
+                      ? 'Loading...'
+                      : 'Question ${currentQuestion + 1}/${questions.length}:\nWhat is the capital of ${questions[currentQuestion]['country']}?',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
