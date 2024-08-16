@@ -1,0 +1,17 @@
+[
+    {"country": "France", "capital": "Paris"},
+    {"country": "Germany", "capital": "Berlin"},
+    {"country": "Spain", "capital": "Madrid"},
+    {"country": "Italy", "capital": "Rome"},
+    {"country": "United Kingdom", "capital": "London"},
+    {"country": "Japan", "capital": "Tokyo"},
+    {"country": "Canada", "capital": "Ottawa"},
+    {"country": "Brazil", "capital": "Brasília"},
+    {"country": "Australia", "capital": "Canberra"},
+    {"country": "China", "capital": "Beijing"},
+    {"country": "India", "capital": "New Delhi"},
+    {"country": "Russia", "capital": "Moscow"},
+    {"country": "United States", "capital": "Washington D.C."},
+    {"country": "Mexico", "capital": "Mexico City"},
+    {"country": "South Africa", "capital": "Pretoria"}
+  ]
